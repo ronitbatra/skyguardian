@@ -17,8 +17,8 @@ nav:
       - Module: api.md
 
 # Enable search plugin
-tplugins:
-  - search
+plugins:
+  - search  # Make sure a `docs/` directory with markdown files exists in the repo
 
 # Markdown extensions (optional)
 markdown_extensions:
