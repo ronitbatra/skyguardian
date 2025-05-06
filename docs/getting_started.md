@@ -33,7 +33,3 @@ client.start_monitoring()
 status = client.get_status()
 print(f"SkyGuardian status: {status}")
 ```
-
-## Next Steps
-
-Explore the [API Reference](api.md) for more advanced usage. 
