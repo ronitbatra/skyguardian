@@ -1,0 +1,34 @@
+site_name: SkyGuardian Docs
+site_description: "Documentation for the SkyGuardian project"
+site_author: "Your Name or Team"
+
+# Where your markdown files live
+docs_dir: docs
+
+# Theme configuration (using Material for MkDocs)
+theme:
+  name: material
+
+# Navigation structure
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+  - API Reference:
+      - Module: api.md
+
+# Enable search plugin
+tplugins:
+  - search
+
+# Markdown extensions (optional)
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+
+# Extra configuration (optional)
+# extra_css:
+#   - stylesheets/extra.css
+# extra_javascript:
+#   - javascripts/extra.js 
