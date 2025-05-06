@@ -1,16 +1,136 @@
 # .github/workflows/ci.yml
-name: CI – Python version check
+name: CI Pipeline
 
-on:            # Triggers
-  push:        # every push to any branch
-  pull_request: # and every PR open/update
+env:
+  COV_MODULE: skyguardian  # main Python module for coverage reporting
+
+# 1 · Run on every push or PR
+on:
+  push:
+    branches: [main, dev]  # only run on specific branches to conserve minutes
+  pull_request:
+    branches: [main, dev]  # only run PR workflows for these branches
+
+permissions:
+  contents: read          # all jobs need this for checkout
+  packages: write         # needed only for docker-image to push to GHCR
 
 jobs:
-  show-python-version:
-    runs-on: ubuntu-latest      # Free GitHub‑hosted VM
+  # ------------------------------------------------------------
+  # 2 · Core checks: lint, tests, coverage, security audit
+  # ------------------------------------------------------------
+  ci-core:
+    runs-on: ubuntu-latest
     steps:
+      # 2‑A Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2‑B Set up Python 3.12 + built‑in pip cache
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # 2‑C Install runtime + dev requirements
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+      - name: Check dependency files
+        run: |
+          for f in requirements.txt requirements-dev.txt; do
+            if [ ! -f "$f" ]; then echo "Error: Missing $f file"; exit 1; fi
+          done
+          # Check for Dockerfile
+          if [ ! -f "Dockerfile" ] && [ ! -f "docker/Dockerfile" ]; then
+            echo "Warning: No Dockerfile found at root or in docker/ directory"
+          fi
+
+      # 2‑D Lint with Ruff
+      - name: Ruff lint
+        run: ruff check .
+
+      # 2‑E Run unit tests with coverage
+      - name: Run tests
+        run: |
+          # Run tests with coverage if module is specified, otherwise just run tests
+          if [ "${{ env.COV_MODULE }}" != "" ]; then
+            pytest -q --cov-report=xml --cov=${{ env.COV_MODULE }}
+          else
+            pytest -q
+          fi
+
+      # 2‑F Upload coverage to Codecov (skip if token not set)
+      # - name: Upload coverage to Codecov
+      #   if: ${{ secrets.CODECOV_TOKEN != '' }}
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./coverage.xml
+
+      # 2‑G Security audit of Python deps
+      - name: pip‑audit
+        run: pip-audit -r requirements.txt
+
+      # 2‑H Show Python version (keeps original demo step)
       - name: Show Python version
         run: python --version
+
+  # ------------------------------------------------------------
+  # 3 · Build documentation (MkDocs or Sphinx)
+  # ------------------------------------------------------------
+  docs:
+    runs-on: ubuntu-latest
+    needs: ci-core           # only build if core job succeeded
+    if: github.ref == 'refs/heads/main'  # limit to main branch
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install doc dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+          # Install MkDocs and theme
+          pip install mkdocs mkdocs-material
+
+      - name: Build docs (MkDocs strict mode)
+        run: mkdocs build --strict
+
+  # ------------------------------------------------------------
+  # 4 · Build (and push) Docker image to GHCR
+  # ------------------------------------------------------------
+  docker-image:
+    runs-on: ubuntu-latest
+    needs: ci-core
+    if: github.ref == 'refs/heads/main'      # build only on main
+    steps:
+      - uses: actions/checkout@v4
+
+      # 4‑A Enable emulation for multi‑arch images (optional)
+      - uses: docker/setup-qemu-action@v3
+
+      # 4‑B Set up Docker Buildx
+      - uses: docker/setup-buildx-action@v3
+
+      # 4‑C Login to GitHub Container Registry (GHCR)
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4‑D Build and push
+      - name: Build & push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true  # set to false if you only want to build-test
+          tags: ghcr.io/${{ github.repository }}:latest  # customize image name if needed
+          platforms: linux/amd64  # using only amd64 for faster builds
