@@ -8,11 +8,23 @@ docs_dir: docs
 # Theme configuration (using Material for MkDocs)
 theme:
   name: material
+  palette:
+    primary: indigo
+    accent: blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
 
 # Navigation structure
 nav:
   - Home: index.md
+  - Project Charter: project_charter.md
   - Getting Started: getting_started.md
+  - Development:
+      - Architecture: architecture.md
+      - Rules of Engagement: roe.md
 
 # Enable search plugin
 plugins:
@@ -24,6 +36,9 @@ markdown_extensions:
   - codehilite
   - toc:
       permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables
 
 # Extra configuration (optional)
 # extra_css:
