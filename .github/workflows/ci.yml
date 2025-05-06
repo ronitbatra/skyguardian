@@ -1,0 +1,16 @@
+# .github/workflows/ci.yml
+name: CI – Python version check
+
+on:            # Triggers
+  push:        # every push to any branch
+  pull_request # and every PR open/update
+
+jobs:
+  show-python-version:
+    runs-on: ubuntu-latest      # Free GitHub‑hosted VM
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show Python version
+        run: python --version
