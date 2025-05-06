@@ -3,7 +3,7 @@ name: CI – Python version check
 
 on:            # Triggers
   push:        # every push to any branch
-  pull_request # and every PR open/update
+  pull_request: # and every PR open/update
 
 jobs:
   show-python-version:
